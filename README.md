@@ -40,8 +40,8 @@ func main() {
     route, err := client.Routes.Get(
         context.Background(),
         &justrouting.RouteRequest{
-            Origin:      []float64{103.8198, 1.3521},
-            Destination: []float64{101.6869, 3.1390},
+            Origin:      []float64{103.708362, 1.357371},
+            Destination: []float64{103.984748, 1.352212},
         },
     )
 

@@ -104,7 +104,7 @@ func TestMatrixRequestEncoding(t *testing.T) {
 		{
 			name:      "defaults request both annotations",
 			req:       &MatrixRequest{Coordinates: threePoints()},
-			wantPath:  "/osrm/table/v1/driving/103.8198,1.3521;103.83,1.3048;103.9915,1.3644",
+			wantPath:  "/table/v1/driving/103.8198,1.3521;103.83,1.3048;103.9915,1.3644",
 			wantQuery: map[string]string{"annotations": "duration,distance"},
 			omitted:   []string{"sources", "destinations"},
 		},
@@ -134,7 +134,7 @@ func TestMatrixRequestEncoding(t *testing.T) {
 				Coordinates: threePoints(),
 				Profile:     "walking",
 			},
-			wantPath: "/osrm/table/v1/walking/103.8198,1.3521;103.83,1.3048;103.9915,1.3644",
+			wantPath: "/table/v1/walking/103.8198,1.3521;103.83,1.3048;103.9915,1.3644",
 		},
 	}
 

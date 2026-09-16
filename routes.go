@@ -187,7 +187,7 @@ func (s *RoutesService) GetAll(ctx context.Context, req *RouteRequest) (*RouteRe
 	out := new(RouteResponse)
 	err = s.client.do(ctx, &request{
 		method:    http.MethodGet,
-		path:      "/osrm/route/v1/" + profileOrDefault(req.Profile) + "/" + coords,
+		path:      "/route/v1/" + profileOrDefault(req.Profile) + "/" + coords,
 		query:     req.query(),
 		needsAuth: true,
 	}, out)

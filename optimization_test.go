@@ -87,8 +87,8 @@ func TestOptimizationRequestBody(t *testing.T) {
 		if r.Method != http.MethodPost {
 			t.Errorf("method = %s, want POST", r.Method)
 		}
-		if r.URL.Path != "/vroom" {
-			t.Errorf("path = %q, want /vroom", r.URL.Path)
+		if r.URL.Path != "/optimize" {
+			t.Errorf("path = %q, want /optimize", r.URL.Path)
 		}
 		raw, _ := io.ReadAll(r.Body)
 		if err := json.Unmarshal(raw, &body); err != nil {

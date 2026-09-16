@@ -114,7 +114,7 @@ func TestRoutesRequestPathEncoding(t *testing.T) {
 		{
 			name:     "origin and destination",
 			req:      simpleRoute(),
-			wantPath: "/osrm/route/v1/driving/103.8198,1.3521;103.9915,1.3644",
+			wantPath: "/route/v1/driving/103.8198,1.3521;103.9915,1.3644",
 		},
 		{
 			name: "waypoints are ordered between origin and destination",
@@ -123,7 +123,7 @@ func TestRoutesRequestPathEncoding(t *testing.T) {
 				Destination: Point{103.9915, 1.3644},
 				Waypoints:   []Point{{103.85, 1.29}, {103.9, 1.31}},
 			},
-			wantPath: "/osrm/route/v1/driving/103.8198,1.3521;103.85,1.29;103.9,1.31;103.9915,1.3644",
+			wantPath: "/route/v1/driving/103.8198,1.3521;103.85,1.29;103.9,1.31;103.9915,1.3644",
 		},
 		{
 			name: "custom profile",
@@ -132,7 +132,7 @@ func TestRoutesRequestPathEncoding(t *testing.T) {
 				Destination: Point{103.9915, 1.3644},
 				Profile:     "cycling",
 			},
-			wantPath: "/osrm/route/v1/cycling/103.8198,1.3521;103.9915,1.3644",
+			wantPath: "/route/v1/cycling/103.8198,1.3521;103.9915,1.3644",
 		},
 		{
 			name: "negative and high-precision coordinates",
@@ -140,7 +140,7 @@ func TestRoutesRequestPathEncoding(t *testing.T) {
 				Origin:      Point{-0.1276474, 51.5073219},
 				Destination: Point{-3.188267, 55.953251},
 			},
-			wantPath: "/osrm/route/v1/driving/-0.1276474,51.5073219;-3.188267,55.953251",
+			wantPath: "/route/v1/driving/-0.1276474,51.5073219;-3.188267,55.953251",
 		},
 	}
 

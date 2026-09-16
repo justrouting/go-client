@@ -220,7 +220,7 @@ func (s *OptimizationService) Solve(ctx context.Context, req *OptimizationReques
 	out := new(Solution)
 	err := s.client.do(ctx, &request{
 		method:    http.MethodPost,
-		path:      "/vroom",
+		path:      "/optimize",
 		body:      req,
 		needsAuth: true,
 	}, out)

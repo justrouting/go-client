@@ -37,7 +37,7 @@ import (
 
 const (
 	// Version is the client version, reported in the User-Agent header.
-	Version = "0.1.0"
+	Version = "0.1.1"
 
 	// DefaultBaseURL is the hosted JustRouting API endpoint.
 	DefaultBaseURL = "https://api.justrouting.tech"

@@ -121,7 +121,7 @@ func (s *MatrixService) Get(ctx context.Context, req *MatrixRequest) (*MatrixRes
 	out := new(MatrixResponse)
 	err = s.client.do(ctx, &request{
 		method:    http.MethodGet,
-		path:      "/osrm/table/v1/" + profileOrDefault(req.Profile) + "/" + coords,
+		path:      "/table/v1/" + profileOrDefault(req.Profile) + "/" + coords,
 		query:     query,
 		needsAuth: true,
 	}, out)

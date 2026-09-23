@@ -143,6 +143,7 @@ const maxErrorBodyBytes = 8 << 10
 //	{"error": "..."}                       gateway errors
 //	{"code": "NoRoute", "message": "..."}  routing engine (code is a string)
 //	{"code": 3, "error": "..."}            optimization engine (code is a number)
+//	{"statusCode": 401, "error": "Unauthorized", "message": "Invalid apiKey"}  geocoding upstream
 type errorPayload struct {
 	Error   string          `json:"error"`
 	Message string          `json:"message"`
@@ -158,10 +159,12 @@ func parseError(statusCode int, body []byte) *Error {
 	var payload errorPayload
 	if err := json.Unmarshal(bytes.TrimSpace(body), &payload); err == nil {
 		switch {
+		case payload.Message != "":
+			// Message wins over Error: the geocoding upstream reports
+			// both, with the informative text in message.
+			e.Message = payload.Message
 		case payload.Error != "":
 			e.Message = payload.Error
-		case payload.Message != "":
-			e.Message = payload.Message
 		}
 		applyEngineCode(e, payload.Code)
 	}

@@ -178,3 +178,28 @@ func TestIntegrationOptimization(t *testing.T) {
 	t.Logf("cost=%d routes=%d unassigned=%d",
 		solution.Summary.Cost, len(solution.Routes), len(solution.Unassigned))
 }
+
+func TestIntegrationGeocode(t *testing.T) {
+	requireAPIKey(t)
+	client := integrationClient(t)
+
+	results, err := client.Geocode.Search(integrationContext(t), &GeocodeRequest{
+		Text:  "Marina Bay Sands, Singapore",
+		Limit: 3,
+	})
+	if err != nil {
+		t.Fatalf("Geocode.Search: %v", err)
+	}
+
+	if len(results.Results) == 0 {
+		t.Fatal("no results returned")
+	}
+	top := results.Results[0]
+	if top.Formatted == "" {
+		t.Error("Formatted is empty")
+	}
+	if err := top.Location().Validate(); err != nil {
+		t.Errorf("Location: %v", err)
+	}
+	t.Logf("top result: %s at %v", top.Formatted, top.Location())
+}

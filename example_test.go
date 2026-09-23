@@ -111,6 +111,21 @@ func ExampleOptimizationService_Solve() {
 	fmt.Printf("%d task(s) unassigned\n", len(solution.Unassigned))
 }
 
+func ExampleGeocodeService_Search() {
+	client := justrouting.NewClient("YOUR_API_KEY")
+
+	results, err := client.Geocode.Search(context.Background(), &justrouting.GeocodeRequest{
+		Text: "Marina Bay Sands, Singapore",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, r := range results.Results {
+		fmt.Printf("%s (%.4f, %.4f)\n", r.Formatted, r.Lon, r.Lat)
+	}
+}
+
 // Failures are classified with sentinel errors, so callers never match on
 // message text.
 func ExampleError() {

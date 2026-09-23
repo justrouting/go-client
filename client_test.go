@@ -51,6 +51,7 @@ func TestNewClientDefaults(t *testing.T) {
 		"Routes":       c.Routes,
 		"Matrix":       c.Matrix,
 		"Optimization": c.Optimization,
+		"Geocode":      c.Geocode,
 		"Health":       c.Health,
 	} {
 		if svc == nil {

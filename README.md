@@ -1,6 +1,6 @@
 # JustRouting Go Client
 
-Official Go client for the [JustRouting](https://justrouting.tech) API — routing, distance matrices, and vehicle routing optimization across Southeast Asia.
+Official Go client for the [JustRouting](https://justrouting.tech) API — routing, distance matrices, vehicle routing optimization, and geocoding across Southeast Asia.
 
 No dependencies outside the standard library.
 
@@ -60,7 +60,7 @@ func main() {
 
 ## Services
 
-A `Client` exposes four services.
+A `Client` exposes five services.
 
 ### Routes
 
@@ -126,6 +126,31 @@ fmt.Println(len(solution.Unassigned), "task(s) could not be served")
 ```
 
 Use `Shipments` instead of `Jobs` for pickup-and-delivery pairs that must be served in order by the same vehicle.
+
+### Geocode
+
+`Geocode.Search` converts an address into coordinates, by free text or by structured fields (exactly one of the two):
+
+```go
+results, err := client.Geocode.Search(ctx, &justrouting.GeocodeRequest{
+    Text: "Marina Bay Sands, Singapore",
+})
+for _, r := range results.Results {
+    fmt.Println(r.Formatted, r.Location()) // address text, [lon, lat]
+}
+```
+
+```go
+results, err := client.Geocode.Search(ctx, &justrouting.GeocodeRequest{
+    Structured: &justrouting.StructuredQuery{
+        Housenumber: "10",
+        Street:      "Bayfront Avenue",
+        City:        "Singapore",
+    },
+})
+```
+
+Results are ordered best first; an empty `Results` list simply means nothing matched. The client always requests `format=json`, regardless of the API's default response format. Use `Filters` (repeatable, e.g. `countrycode:sg`) to restrict results and `Bias` (e.g. `proximity:103.8,1.3`) to prefer places near a point. `GeocodeResult.Location()` returns a `Point` in the usual `[longitude, latitude]` order, ready to feed into `Routes`, `Matrix`, or `Optimization`. Errors from the geocoding upstream are classified by HTTP status like any other failure (`401` → `ErrUnauthorized`, `429` → `ErrRateLimited`, `502` → `ErrUpstreamUnavailable`).
 
 ### Health
 
@@ -237,6 +262,7 @@ export JUSTROUTING_API_KEY=<your key>
 go run ./examples/route
 go run ./examples/matrix
 go run ./examples/optimization
+go run ./examples/geocode
 ```
 
 ## Development

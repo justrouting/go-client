@@ -43,6 +43,16 @@ func TestErrorClassification(t *testing.T) {
 			notWant: []error{ErrQuotaExceeded},
 		},
 		{
+			// The geocoding upstream reports both fields; message holds
+			// the informative text and must win.
+			name:    "geocoding upstream unauthorized",
+			status:  http.StatusUnauthorized,
+			body:    `{"statusCode":401,"error":"Unauthorized","message":"Invalid apiKey"}`,
+			want:    []error{ErrUnauthorized},
+			notWant: []error{ErrRateLimited},
+			wantMsg: "Invalid apiKey",
+		},
+		{
 			name:   "daily quota exhausted",
 			status: http.StatusTooManyRequests,
 			body:   `{"error":"daily quota exceeded (limit 100)"}`,

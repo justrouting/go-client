@@ -37,7 +37,7 @@ import (
 
 const (
 	// Version is the client version, reported in the User-Agent header.
-	Version = "0.1.1"
+	Version = "0.2.0"
 
 	// DefaultBaseURL is the hosted JustRouting API endpoint.
 	DefaultBaseURL = "https://api.justrouting.tech"
@@ -71,6 +71,8 @@ type Client struct {
 	Matrix *MatrixService
 	// Optimization solves vehicle routing problems.
 	Optimization *OptimizationService
+	// Geocode converts addresses into coordinates.
+	Geocode *GeocodeService
 	// Health reports API and upstream availability.
 	Health *HealthService
 }
@@ -112,6 +114,7 @@ func NewClient(apiKey string, opts ...ClientOption) *Client {
 	c.Routes = &RoutesService{client: c}
 	c.Matrix = &MatrixService{client: c}
 	c.Optimization = &OptimizationService{client: c}
+	c.Geocode = &GeocodeService{client: c}
 	c.Health = &HealthService{client: c}
 
 	return c

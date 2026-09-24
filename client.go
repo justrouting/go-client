@@ -37,7 +37,7 @@ import (
 
 const (
 	// Version is the client version, reported in the User-Agent header.
-	Version = "0.2.0"
+	Version = "0.3.0"
 
 	// DefaultBaseURL is the hosted JustRouting API endpoint.
 	DefaultBaseURL = "https://api.justrouting.tech"
@@ -69,10 +69,16 @@ type Client struct {
 	Routes *RoutesService
 	// Matrix computes duration and distance matrices.
 	Matrix *MatrixService
-	// Optimization solves vehicle routing problems.
-	Optimization *OptimizationService
+	// MapMatching snaps GPS traces onto the road network.
+	MapMatching *MapMatchingService
+	// Trip finds the fastest order to visit a set of coordinates.
+	Trip *TripService
+	// Nearest finds the road segment closest to a coordinate.
+	Nearest *NearestService
 	// Geocode converts addresses into coordinates.
 	Geocode *GeocodeService
+	// Optimization solves vehicle routing problems.
+	Optimization *OptimizationService
 	// Health reports API and upstream availability.
 	Health *HealthService
 }
@@ -113,8 +119,11 @@ func NewClient(apiKey string, opts ...ClientOption) *Client {
 
 	c.Routes = &RoutesService{client: c}
 	c.Matrix = &MatrixService{client: c}
-	c.Optimization = &OptimizationService{client: c}
+	c.MapMatching = &MapMatchingService{client: c}
+	c.Trip = &TripService{client: c}
+	c.Nearest = &NearestService{client: c}
 	c.Geocode = &GeocodeService{client: c}
+	c.Optimization = &OptimizationService{client: c}
 	c.Health = &HealthService{client: c}
 
 	return c

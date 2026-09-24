@@ -50,8 +50,11 @@ func TestNewClientDefaults(t *testing.T) {
 	for name, svc := range map[string]any{
 		"Routes":       c.Routes,
 		"Matrix":       c.Matrix,
-		"Optimization": c.Optimization,
+		"MapMatching":  c.MapMatching,
+		"Trip":         c.Trip,
+		"Nearest":      c.Nearest,
 		"Geocode":      c.Geocode,
+		"Optimization": c.Optimization,
 		"Health":       c.Health,
 	} {
 		if svc == nil {

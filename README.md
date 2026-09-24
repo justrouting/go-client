@@ -1,6 +1,6 @@
 # JustRouting Go Client
 
-Official Go client for the [JustRouting](https://justrouting.tech) API — routing, distance matrices, vehicle routing optimization, and geocoding across Southeast Asia.
+Official Go client for the [JustRouting](https://justrouting.tech) API — routing, distance matrices, map matching, trips, nearest-road lookup, vehicle routing optimization, and geocoding across Southeast Asia.
 
 No dependencies outside the standard library.
 
@@ -60,7 +60,7 @@ func main() {
 
 ## Services
 
-A `Client` exposes five services.
+A `Client` exposes eight services.
 
 ### Routes
 
@@ -104,28 +104,45 @@ if seconds, ok := m.Duration(0, 1); ok {
 
 The accessors return `false` for unreachable pairs. The API reports those as `null`, which is deliberately kept distinct from a genuine zero — that is why `Durations` and `Distances` hold `*float64`.
 
-### Optimization
+### Map Matching
 
-Assign tasks to a fleet and order each vehicle's stops.
+Snap a noisy GPS trace onto the road network and get the route that was driven.
 
 ```go
-solution, err := client.Optimization.Solve(ctx, &justrouting.OptimizationRequest{
-    Vehicles: []justrouting.Vehicle{
-        {ID: 1, Start: depot, End: depot, Capacity: []int{4}},
-    },
-    Jobs: []justrouting.Job{
-        {ID: 1, Location: stopA, Delivery: []int{1}, Service: 300},
-        {ID: 2, Location: stopB, Delivery: []int{2}, Service: 300},
-    },
+match, err := client.MapMatching.Get(ctx, &justrouting.MapMatchingRequest{
+    Coordinates: trace, // GPS points in chronological order, at least 2
 })
-
-for _, route := range solution.Routes {
-    fmt.Printf("vehicle %d: %d stops\n", route.Vehicle, len(route.Steps))
-}
-fmt.Println(len(solution.Unassigned), "task(s) could not be served")
+fmt.Printf("%.0f%% confidence\n", match.Confidence*100)
+fmt.Println(match.Distance) // metres, via the embedded Route
 ```
 
-Use `Shipments` instead of `Jobs` for pickup-and-delivery pairs that must be served in order by the same vehicle.
+`Match` embeds `Route`, so every route field (`Distance`, `Duration`, `Geometry`, `Legs`, …) is promoted, plus the engine's `Confidence` (0–1). `MapMatching.GetAll` additionally returns `Tracepoints` — the input coordinates snapped to the road network, aligned with your input; an entry is `nil` when the engine could not match that point. Useful options: `Timestamps` (UNIX seconds per point), `Radiuses` (max snap distance, one value per point — the default is only a few metres, so noisy GPS points usually need it), `Gaps` (`"split"`/`"ignore"`), `Tidy`, `Waypoints` (indices to use as waypoints), and `Snapping` (`"default"`/`"any"`).
+
+### Trip
+
+Visit a set of points in the fastest possible order (a travelling-salesman heuristic).
+
+```go
+trip, err := client.Trip.Get(ctx, &justrouting.TripRequest{
+    Coordinates: []justrouting.Point{depot, stopA, stopB},
+})
+fmt.Println(trip.Distance) // metres
+```
+
+By default the trip returns to its starting point; pass `Roundtrip` (a `bool` pointer) to change that, and `Source`/`Destination` (`"any"`, `"first"`/`"last"`) to pin the ends. `Trip.GetAll` also returns `Waypoints` in the order the trip visits them.
+
+### Nearest
+
+Find the road segment closest to a coordinate.
+
+```go
+wp, err := client.Nearest.Get(ctx, &justrouting.NearestRequest{
+    Coordinate: []float64{103.8198, 1.3521},
+})
+fmt.Printf("%s, %.0f m away\n", wp.Name, wp.Distance)
+```
+
+Pass `Number` to get the second-, third-, … nearest segments; `Nearest.GetAll` returns all of them. The returned `Waypoint` includes the OSM `Nodes` of the matched segment.
 
 ### Geocode
 
@@ -151,6 +168,29 @@ results, err := client.Geocode.Search(ctx, &justrouting.GeocodeRequest{
 ```
 
 Results are ordered best first; an empty `Results` list simply means nothing matched. The client always requests `format=json`, regardless of the API's default response format. Use `Filters` (repeatable, e.g. `countrycode:sg`) to restrict results and `Bias` (e.g. `proximity:103.8,1.3`) to prefer places near a point. `GeocodeResult.Location()` returns a `Point` in the usual `[longitude, latitude]` order, ready to feed into `Routes`, `Matrix`, or `Optimization`. Errors from the geocoding upstream are classified by HTTP status like any other failure (`401` → `ErrUnauthorized`, `429` → `ErrRateLimited`, `502` → `ErrUpstreamUnavailable`).
+
+### Optimization
+
+Assign tasks to a fleet and order each vehicle's stops.
+
+```go
+solution, err := client.Optimization.Solve(ctx, &justrouting.OptimizationRequest{
+    Vehicles: []justrouting.Vehicle{
+        {ID: 1, Start: depot, End: depot, Capacity: []int{4}},
+    },
+    Jobs: []justrouting.Job{
+        {ID: 1, Location: stopA, Delivery: []int{1}, Service: 300},
+        {ID: 2, Location: stopB, Delivery: []int{2}, Service: 300},
+    },
+})
+
+for _, route := range solution.Routes {
+    fmt.Printf("vehicle %d: %d stops\n", route.Vehicle, len(route.Steps))
+}
+fmt.Println(len(solution.Unassigned), "task(s) could not be served")
+```
+
+Use `Shipments` instead of `Jobs` for pickup-and-delivery pairs that must be served in order by the same vehicle.
 
 ### Health
 
@@ -261,8 +301,11 @@ Runnable programs live in [`examples/`](./examples):
 export JUSTROUTING_API_KEY=<your key>
 go run ./examples/route
 go run ./examples/matrix
-go run ./examples/optimization
+go run ./examples/matching
+go run ./examples/trip
+go run ./examples/nearest
 go run ./examples/geocode
+go run ./examples/optimization
 ```
 
 ## Development

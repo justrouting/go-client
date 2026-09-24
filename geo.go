@@ -159,4 +159,7 @@ type Waypoint struct {
 	Distance float64 `json:"distance"`
 	// Hint is an opaque token that can speed up subsequent requests.
 	Hint string `json:"hint,omitempty"`
+	// Nodes are the OSM node IDs of the snapped segment, when the engine
+	// returns them.
+	Nodes []int64 `json:"nodes,omitempty"`
 }

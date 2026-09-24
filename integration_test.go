@@ -150,6 +150,109 @@ func TestIntegrationMatrix(t *testing.T) {
 	}
 }
 
+func TestIntegrationNearest(t *testing.T) {
+	requireAPIKey(t)
+	client := integrationClient(t)
+
+	wp, err := client.Nearest.Get(integrationContext(t), &NearestRequest{
+		Coordinate: Point{103.8198, 1.3521},
+	})
+	if err != nil {
+		t.Fatalf("Nearest.Get: %v", err)
+	}
+
+	if err := wp.Location.Validate(); err != nil {
+		t.Errorf("Location: %v", err)
+	}
+	t.Logf("nearest segment: %s, %.0f m away", wp.Name, wp.Distance)
+}
+
+func TestIntegrationMapMatching(t *testing.T) {
+	requireAPIKey(t)
+	client := integrationClient(t)
+
+	// A trace along the East Coast Parkway, from Marina Bay towards
+	// Changi. Map matching needs points that follow a drivable path, not
+	// arbitrary far-apart coordinates.
+	match, err := client.MapMatching.Get(integrationContext(t), &MapMatchingRequest{
+		Coordinates: []Point{
+			{103.823679, 1.355111},
+			{103.831810, 1.355074},
+			{103.839222, 1.346059},
+			{103.856595, 1.343471},
+			{103.864702, 1.329605},
+			{103.887874, 1.322419},
+			{103.928786, 1.335564},
+			{103.962769, 1.350345},
+			{103.983033, 1.344782},
+			{103.990312, 1.361474},
+		},
+	})
+	if err != nil {
+		t.Fatalf("MapMatching.Get: %v", err)
+	}
+
+	if match.Confidence <= 0 || match.Confidence > 1 {
+		t.Errorf("Confidence = %v, want in (0, 1]", match.Confidence)
+	}
+	if match.Distance <= 0 {
+		t.Errorf("Distance = %v, want positive", match.Distance)
+	}
+	t.Logf("%.0f%% confidence, %.2f km", match.Confidence*100, match.Distance/1000)
+}
+
+func TestIntegrationTrip(t *testing.T) {
+	requireAPIKey(t)
+	client := integrationClient(t)
+
+	resp, err := client.Trip.GetAll(integrationContext(t), &TripRequest{
+		Coordinates: []Point{
+			{103.8198, 1.3521},
+			{103.8514, 1.2897},
+			{103.9915, 1.3644},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Trip.GetAll: %v", err)
+	}
+
+	if len(resp.Trips) == 0 {
+		t.Fatal("no trips returned")
+	}
+	if resp.Trips[0].Distance <= 0 {
+		t.Errorf("Distance = %v, want positive", resp.Trips[0].Distance)
+	}
+	if len(resp.Waypoints) != 3 {
+		t.Errorf("len(Waypoints) = %d, want 3", len(resp.Waypoints))
+	}
+	t.Logf("%.2f km visiting %d waypoints", resp.Trips[0].Distance/1000, len(resp.Waypoints))
+}
+
+func TestIntegrationGeocode(t *testing.T) {
+	requireAPIKey(t)
+	client := integrationClient(t)
+
+	results, err := client.Geocode.Search(integrationContext(t), &GeocodeRequest{
+		Text:  "Marina Bay Sands, Singapore",
+		Limit: 3,
+	})
+	if err != nil {
+		t.Fatalf("Geocode.Search: %v", err)
+	}
+
+	if len(results.Results) == 0 {
+		t.Fatal("no results returned")
+	}
+	top := results.Results[0]
+	if top.Formatted == "" {
+		t.Error("Formatted is empty")
+	}
+	if err := top.Location().Validate(); err != nil {
+		t.Errorf("Location: %v", err)
+	}
+	t.Logf("top result: %s at %v", top.Formatted, top.Location())
+}
+
 func TestIntegrationOptimization(t *testing.T) {
 	requireAPIKey(t)
 	client := integrationClient(t)
@@ -177,29 +280,4 @@ func TestIntegrationOptimization(t *testing.T) {
 	}
 	t.Logf("cost=%d routes=%d unassigned=%d",
 		solution.Summary.Cost, len(solution.Routes), len(solution.Unassigned))
-}
-
-func TestIntegrationGeocode(t *testing.T) {
-	requireAPIKey(t)
-	client := integrationClient(t)
-
-	results, err := client.Geocode.Search(integrationContext(t), &GeocodeRequest{
-		Text:  "Marina Bay Sands, Singapore",
-		Limit: 3,
-	})
-	if err != nil {
-		t.Fatalf("Geocode.Search: %v", err)
-	}
-
-	if len(results.Results) == 0 {
-		t.Fatal("no results returned")
-	}
-	top := results.Results[0]
-	if top.Formatted == "" {
-		t.Error("Formatted is empty")
-	}
-	if err := top.Location().Validate(); err != nil {
-		t.Errorf("Location: %v", err)
-	}
-	t.Logf("top result: %s at %v", top.Formatted, top.Location())
 }

@@ -87,6 +87,72 @@ func ExampleMatrixService_Get() {
 	}
 }
 
+func ExampleMapMatchingService_Get() {
+	client := justrouting.NewClient("YOUR_API_KEY")
+
+	// A noisy GPS trace, in chronological order.
+	trace := []justrouting.Point{
+		{103.8198, 1.3521},
+		{103.8514, 1.2897},
+		{103.9915, 1.3644},
+	}
+
+	match, err := client.MapMatching.Get(context.Background(), &justrouting.MapMatchingRequest{
+		Coordinates: trace,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("%.0f%% confidence, %.1f km\n", match.Confidence*100, match.Distance/1000)
+}
+
+func ExampleTripService_Get() {
+	client := justrouting.NewClient("YOUR_API_KEY")
+
+	depot := justrouting.Point{103.8198, 1.3521}
+	trip, err := client.Trip.Get(context.Background(), &justrouting.TripRequest{
+		Coordinates: []justrouting.Point{
+			depot,
+			{103.8514, 1.2897},
+			{103.9915, 1.3644},
+		},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("%.1f km in %.0f min\n", trip.Distance/1000, trip.Duration/60)
+}
+
+func ExampleNearestService_Get() {
+	client := justrouting.NewClient("YOUR_API_KEY")
+
+	wp, err := client.Nearest.Get(context.Background(), &justrouting.NearestRequest{
+		Coordinate: justrouting.Point{103.8198, 1.3521},
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("%s, %.0f m away\n", wp.Name, wp.Distance)
+}
+
+func ExampleGeocodeService_Search() {
+	client := justrouting.NewClient("YOUR_API_KEY")
+
+	results, err := client.Geocode.Search(context.Background(), &justrouting.GeocodeRequest{
+		Text: "Marina Bay Sands, Singapore",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, r := range results.Results {
+		fmt.Printf("%s (%.4f, %.4f)\n", r.Formatted, r.Lon, r.Lat)
+	}
+}
+
 func ExampleOptimizationService_Solve() {
 	client := justrouting.NewClient("YOUR_API_KEY")
 
@@ -109,21 +175,6 @@ func ExampleOptimizationService_Solve() {
 		fmt.Printf("vehicle %d serves %d stops\n", route.Vehicle, len(route.Steps))
 	}
 	fmt.Printf("%d task(s) unassigned\n", len(solution.Unassigned))
-}
-
-func ExampleGeocodeService_Search() {
-	client := justrouting.NewClient("YOUR_API_KEY")
-
-	results, err := client.Geocode.Search(context.Background(), &justrouting.GeocodeRequest{
-		Text: "Marina Bay Sands, Singapore",
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, r := range results.Results {
-		fmt.Printf("%s (%.4f, %.4f)\n", r.Formatted, r.Lon, r.Lat)
-	}
 }
 
 // Failures are classified with sentinel errors, so callers never match on

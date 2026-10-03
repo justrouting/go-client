@@ -1,5 +1,10 @@
 # JustRouting Go Client
 
+[![CI](https://github.com/justrouting/go-client/actions/workflows/ci.yml/badge.svg)](https://github.com/justrouting/go-client/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/justrouting/go-client)](https://goreportcard.com/report/github.com/justrouting/go-client)
+[![Go Reference](https://pkg.go.dev/badge/github.com/justrouting/go-client.svg)](https://pkg.go.dev/github.com/justrouting/go-client)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 Official Go client for the [JustRouting](https://justrouting.tech) API — routing, distance matrices, map matching, trips, nearest-road lookup, vehicle routing optimization, and geocoding across Southeast Asia.
 
 No dependencies outside the standard library.

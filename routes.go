@@ -128,6 +128,10 @@ type Intersection struct {
 	In       *int   `json:"in,omitempty"`
 	Out      *int   `json:"out,omitempty"`
 	Lanes    []Lane `json:"lanes,omitempty"`
+	// Classes lists the road classes of the exiting roads, such as "toll"
+	// and "ferry". The engine reports it only when turn-by-turn steps are
+	// requested (see [RouteRequest.Steps]).
+	Classes []string `json:"classes,omitempty"`
 }
 
 // Lane describes a turn lane at an [Intersection].

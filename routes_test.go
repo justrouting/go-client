@@ -67,6 +67,53 @@ func TestRoutesGetDecodesResponse(t *testing.T) {
 	}
 }
 
+// Intersection classes carry the toll/ferry signals that callers surface.
+func TestRoutesGetDecodesIntersectionClasses(t *testing.T) {
+	c := newTestClient(t, jsonHandler(http.StatusOK, `{
+	  "code": "Ok",
+	  "waypoints": [],
+	  "routes": [
+	    {
+	      "legs": [
+	        {
+	          "summary": "East Coast Parkway",
+	          "steps": [
+	            {
+	              "mode": "driving",
+	              "maneuver": {"type": "depart", "location": [103.81982, 1.35211]},
+	              "intersections": [
+	                {
+	                  "location": [103.81982, 1.35211],
+	                  "bearings": [95, 275],
+	                  "entry": [true, false],
+	                  "in": 1,
+	                  "out": 0,
+	                  "classes": ["toll", "motorway"]
+	                }
+	              ]
+	            }
+	          ]
+	        }
+	      ]
+	    }
+	  ]
+	}`))
+
+	route, err := c.Routes.Get(context.Background(), simpleRoute())
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+
+	leg := route.Legs[0]
+	if len(leg.Steps) != 1 {
+		t.Fatalf("len(Steps) = %d, want 1", len(leg.Steps))
+	}
+	got := leg.Steps[0].Intersections[0].Classes
+	if len(got) != 2 || got[0] != "toll" || got[1] != "motorway" {
+		t.Errorf("Classes = %v, want [toll motorway]", got)
+	}
+}
+
 // Get returns only the best route; GetAll exposes alternatives and waypoints.
 func TestRoutesGetAllReturnsAlternativesAndWaypoints(t *testing.T) {
 	c := newTestClient(t, jsonHandler(http.StatusOK, routeFixture))

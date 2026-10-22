@@ -61,7 +61,7 @@ func main() {
 }
 ```
 
-> The coordinates above are Singapore and Kuala Lumpur, which span two countries. See [Coordinates must share a country](#coordinates-must-share-a-country) — the runnable examples use same-country pairs.
+> > The coordinates above are in Singapore. See [Coordinates must share a country](#coordinates-must-share-a-country).
 
 ## Services
 
@@ -196,6 +196,8 @@ fmt.Println(len(solution.Unassigned), "task(s) could not be served")
 ```
 
 Use `Shipments` instead of `Jobs` for pickup-and-delivery pairs that must be served in order by the same vehicle.
+
+The full engine feature set is modeled: capacities, skills, priorities, time windows, breaks, per-vehicle costs, speed factors and limits, per-type setup/service overrides, custom matrices (with `*_index` locations), warm-start vehicle steps, and route geometry via `Options.Geometry`.
 
 ### Health
 

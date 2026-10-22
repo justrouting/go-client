@@ -24,6 +24,9 @@ type OptimizationRequest struct {
 	Jobs []Job `json:"jobs,omitempty"`
 	// Shipments are pickup-and-delivery pairs handled by one vehicle.
 	Shipments []Shipment `json:"shipments,omitempty"`
+	// Matrices are custom matrices per routing profile; the map keys are
+	// profile names such as "car" or "motorcycle".
+	Matrices map[string]CustomMatrix `json:"matrices,omitempty"`
 	// Options tunes the solver.
 	Options *OptimizationOptions `json:"options,omitempty"`
 }
@@ -39,6 +42,71 @@ type OptimizationOptions struct {
 // same origin used by the rest of the request.
 type TimeWindow [2]int
 
+// CustomMatrix is a user-supplied travel-time, distance or cost matrix for
+// one routing profile. Values are read as matrix[row][column]; rows and
+// columns are indexed by the *_index fields on vehicles and tasks.
+type CustomMatrix struct {
+	// Durations is a travel-time matrix in seconds. Providing it for every
+	// profile in use makes Location, Start and End optional.
+	Durations [][]int `json:"durations,omitempty"`
+	// Distances is a distance matrix in meters. It requires Durations.
+	Distances [][]int `json:"distances,omitempty"`
+	// Costs is a cost matrix used in all route cost evaluations.
+	Costs [][]int `json:"costs,omitempty"`
+}
+
+// Break is a rest period scheduled during a vehicle's route.
+type Break struct {
+	// ID identifies the break. It must be unique within the vehicle.
+	ID int `json:"id"`
+	// TimeWindows bound when the break may start.
+	TimeWindows []TimeWindow `json:"time_windows,omitempty"`
+	// Service is the break length in seconds.
+	Service int `json:"service,omitempty"`
+	// Description is an opaque label echoed back in the solution.
+	Description string `json:"description,omitempty"`
+	// MaxLoad is the maximum load, per capacity dimension, under which
+	// the break may happen.
+	MaxLoad []int `json:"max_load,omitempty"`
+}
+
+// VehicleCosts adjusts how the solver values one vehicle.
+type VehicleCosts struct {
+	// Fixed is the one-time cost of using this vehicle. Defaults to 0.
+	Fixed int `json:"fixed,omitempty"`
+	// PerHour is the cost of one hour of travel time. Defaults to 3600.
+	PerHour int `json:"per_hour,omitempty"`
+	// PerTaskHour is the cost of one hour of task time (setup + service).
+	// Defaults to 0.
+	PerTaskHour int `json:"per_task_hour,omitempty"`
+	// PerKM is the cost of one kilometer of travel. Defaults to 0.
+	PerKM int `json:"per_km,omitempty"`
+}
+
+// VehicleStep is one entry of a custom route on a [Vehicle]. The hosted API
+// runs in solving mode, where Steps warm-start the search and only the
+// "job", "pickup" and "delivery" step types are used; the plan-only
+// service_at, service_after and service_before keys would be ignored by the
+// engine, so the client does not expose them.
+type VehicleStep struct {
+	// Type is "job", "pickup" or "delivery".
+	Type string `json:"type"`
+	// ID is the task ID this step refers to.
+	ID int `json:"id,omitempty"`
+}
+
+// Violation describes one constraint violation. Violations are always empty
+// in solving mode, the only mode the hosted API runs, but the fields exist
+// for API completeness.
+type Violation struct {
+	// Cause is the violated constraint, e.g. "delay", "skills" or
+	// "missing_break".
+	Cause string `json:"cause"`
+	// Duration is the lateness in seconds for "delay" causes, earliness
+	// for "lead_time".
+	Duration int `json:"duration"`
+}
+
 // Vehicle is one member of the fleet.
 type Vehicle struct {
 	// ID identifies the vehicle in the solution. It must be unique.
@@ -48,17 +116,36 @@ type Vehicle struct {
 	// Start is where the vehicle begins, as [longitude, latitude]. Omit
 	// for a vehicle that may start anywhere.
 	Start Point `json:"start,omitempty"`
+	// StartIndex is the row/column in custom matrices that replaces Start.
+	StartIndex *int `json:"start_index,omitempty"`
 	// End is where the vehicle must finish. Omit to end anywhere.
 	End Point `json:"end,omitempty"`
+	// EndIndex is the row/column in custom matrices that replaces End.
+	EndIndex *int `json:"end_index,omitempty"`
 	// Capacity is a multidimensional capacity vector. Its length must
 	// match the Delivery and Pickup vectors on tasks.
 	Capacity []int `json:"capacity,omitempty"`
 	// Skills lists capabilities this vehicle provides.
 	Skills []int `json:"skills,omitempty"`
+	// Type names this vehicle for per-type setup and service times on
+	// tasks.
+	Type string `json:"type,omitempty"`
 	// TimeWindow bounds when the vehicle is available.
 	TimeWindow *TimeWindow `json:"time_window,omitempty"`
+	// Breaks are rest periods during the route.
+	Breaks []Break `json:"breaks,omitempty"`
+	// SpeedFactor scales all travel times for this vehicle, in (0, 5].
+	SpeedFactor float64 `json:"speed_factor,omitempty"`
 	// MaxTasks caps how many tasks the vehicle may be assigned.
 	MaxTasks int `json:"max_tasks,omitempty"`
+	// MaxTravelTime caps total travel time in seconds.
+	MaxTravelTime int `json:"max_travel_time,omitempty"`
+	// MaxDistance caps total travel distance in meters.
+	MaxDistance int `json:"max_distance,omitempty"`
+	// Costs adjusts how the solver values this vehicle.
+	Costs *VehicleCosts `json:"costs,omitempty"`
+	// Steps is a custom route used to warm-start the search.
+	Steps []VehicleStep `json:"steps,omitempty"`
 	// Description is an opaque label echoed back in the solution.
 	Description string `json:"description,omitempty"`
 }
@@ -67,12 +154,21 @@ type Vehicle struct {
 type Job struct {
 	// ID identifies the job in the solution. It must be unique.
 	ID int `json:"id"`
-	// Location is where the job happens, as [longitude, latitude].
-	Location Point `json:"location"`
+	// Location is where the job happens, as [longitude, latitude]. Omit
+	// when custom matrices cover every profile in use; then LocationIndex
+	// is required.
+	Location Point `json:"location,omitempty"`
+	// LocationIndex is the row/column in custom matrices that replaces
+	// Location.
+	LocationIndex *int `json:"location_index,omitempty"`
 	// Setup is fixed preparation time in seconds.
 	Setup int `json:"setup,omitempty"`
 	// Service is time spent on site, in seconds.
 	Service int `json:"service,omitempty"`
+	// SetupPerType overrides Setup for vehicles of each named type.
+	SetupPerType map[string]int `json:"setup_per_type,omitempty"`
+	// ServicePerType overrides Service for vehicles of each named type.
+	ServicePerType map[string]int `json:"service_per_type,omitempty"`
 	// Delivery is the amount unloaded here, matching vehicle Capacity.
 	Delivery []int `json:"delivery,omitempty"`
 	// Pickup is the amount loaded here, matching vehicle Capacity.
@@ -89,12 +185,26 @@ type Job struct {
 
 // ShipmentStep is one half of a [Shipment].
 type ShipmentStep struct {
-	ID          int          `json:"id"`
-	Location    Point        `json:"location"`
-	Setup       int          `json:"setup,omitempty"`
-	Service     int          `json:"service,omitempty"`
+	ID int `json:"id"`
+	// Location is where the step happens, as [longitude, latitude]. Omit
+	// when custom matrices cover every profile in use; then LocationIndex
+	// is required.
+	Location Point `json:"location,omitempty"`
+	// LocationIndex is the row/column in custom matrices that replaces
+	// Location.
+	LocationIndex *int `json:"location_index,omitempty"`
+	// Setup is fixed preparation time in seconds.
+	Setup int `json:"setup,omitempty"`
+	// Service is time spent on site, in seconds.
+	Service int `json:"service,omitempty"`
+	// SetupPerType overrides Setup for vehicles of each named type.
+	SetupPerType map[string]int `json:"setup_per_type,omitempty"`
+	// ServicePerType overrides Service for vehicles of each named type.
+	ServicePerType map[string]int `json:"service_per_type,omitempty"`
+	// TimeWindows constrains when the step may be served.
 	TimeWindows []TimeWindow `json:"time_windows,omitempty"`
-	Description string       `json:"description,omitempty"`
+	// Description is an opaque label echoed back in the solution.
+	Description string `json:"description,omitempty"`
 }
 
 // Shipment is a pickup and a delivery that must be served in order by the
@@ -137,17 +247,18 @@ func (s *Solution) status() *Error {
 
 // Summary aggregates the cost and time of a whole [Solution].
 type Summary struct {
-	Cost        int   `json:"cost"`
-	Routes      int   `json:"routes"`
-	Unassigned  int   `json:"unassigned"`
-	Delivery    []int `json:"delivery,omitempty"`
-	Pickup      []int `json:"pickup,omitempty"`
-	Setup       int   `json:"setup"`
-	Service     int   `json:"service"`
-	Duration    int   `json:"duration"`
-	WaitingTime int   `json:"waiting_time"`
-	Priority    int   `json:"priority"`
-	Distance    int   `json:"distance,omitempty"`
+	Cost        int         `json:"cost"`
+	Routes      int         `json:"routes"`
+	Unassigned  int         `json:"unassigned"`
+	Delivery    []int       `json:"delivery,omitempty"`
+	Pickup      []int       `json:"pickup,omitempty"`
+	Setup       int         `json:"setup"`
+	Service     int         `json:"service"`
+	Duration    int         `json:"duration"`
+	WaitingTime int         `json:"waiting_time"`
+	Priority    int         `json:"priority"`
+	Distance    int         `json:"distance,omitempty"`
+	Violations  []Violation `json:"violations,omitempty"`
 }
 
 // VehicleRoute is the itinerary assigned to one vehicle.
@@ -163,11 +274,15 @@ type VehicleRoute struct {
 	Distance    int   `json:"distance,omitempty"`
 	Delivery    []int `json:"delivery,omitempty"`
 	Pickup      []int `json:"pickup,omitempty"`
+	// Description is the vehicle description echoed from the request.
+	Description string `json:"description,omitempty"`
 	// Geometry is an encoded polyline, present only when
 	// [OptimizationOptions.Geometry] was set.
-	Geometry string `json:"geometry,omitempty"`
-	// Steps are the stops in visiting order.
-	Steps []*RouteStep `json:"steps"`
+	Geometry string       `json:"geometry,omitempty"`
+	Steps    []*RouteStep `json:"steps"`
+	// Violations holds constraint violations for this route. It is
+	// always empty in solving mode, the only mode the hosted API runs.
+	Violations []Violation `json:"violations,omitempty"`
 }
 
 // RouteStep is a single stop on a [VehicleRoute].
@@ -176,6 +291,9 @@ type RouteStep struct {
 	Type string `json:"type"`
 	// Location is where the stop happens.
 	Location Point `json:"location,omitempty"`
+	// LocationIndex is the row/column in custom matrices, when the
+	// request used matrices.
+	LocationIndex int `json:"location_index,omitempty"`
 	// ID is the task ID, for task steps.
 	ID int `json:"id,omitempty"`
 	// Job is the job ID, for job steps.
@@ -188,16 +306,22 @@ type RouteStep struct {
 	Duration int `json:"duration"`
 	Distance int `json:"distance,omitempty"`
 	// Load is the vehicle load after this stop.
-	Load        []int  `json:"load,omitempty"`
-	Description string `json:"description,omitempty"`
+	Load        []int       `json:"load,omitempty"`
+	Description string      `json:"description,omitempty"`
+	Violations  []Violation `json:"violations,omitempty"`
 }
 
 // Unassigned is a task the solver could not fit into any route.
 type Unassigned struct {
-	ID          int    `json:"id"`
-	Type        string `json:"type,omitempty"`
-	Location    Point  `json:"location,omitempty"`
-	Description string `json:"description,omitempty"`
+	ID int `json:"id"`
+	// Type is the task type, e.g. "job".
+	Type string `json:"type,omitempty"`
+	// Location is the task location, when provided in the request.
+	Location Point `json:"location,omitempty"`
+	// LocationIndex is the row/column in custom matrices, when the
+	// request used matrices.
+	LocationIndex int    `json:"location_index,omitempty"`
+	Description   string `json:"description,omitempty"`
 }
 
 // Solve assigns the request's tasks to its vehicles and orders each route.
@@ -253,25 +377,47 @@ func (r *OptimizationRequest) validate() error {
 				return fmt.Errorf("Vehicles[%d].End: %w", i, err)
 			}
 		}
-		if len(v.Start) == 0 && len(v.End) == 0 {
-			return fmt.Errorf("%w: Vehicles[%d] needs a Start or an End", ErrInvalidRequest, i)
+		// A custom-matrix row counts as an anchor just like coordinates.
+		if len(v.Start) == 0 && v.StartIndex == nil && len(v.End) == 0 && v.EndIndex == nil {
+			return fmt.Errorf(
+				"%w: Vehicles[%d] needs a Start, StartIndex, End or EndIndex",
+				ErrInvalidRequest,
+				i,
+			)
 		}
 	}
 
 	for i, j := range r.Jobs {
-		if err := j.Location.Validate(); err != nil {
-			return fmt.Errorf("Jobs[%d].Location: %w", i, err)
+		if len(j.Location) > 0 {
+			if err := j.Location.Validate(); err != nil {
+				return fmt.Errorf("Jobs[%d].Location: %w", i, err)
+			}
+		}
+		if len(j.Location) == 0 && j.LocationIndex == nil {
+			return fmt.Errorf("%w: Jobs[%d] needs a Location or a LocationIndex", ErrInvalidRequest, i)
 		}
 	}
 
 	for i, s := range r.Shipments {
-		if err := s.Pickup.Location.Validate(); err != nil {
-			return fmt.Errorf("Shipments[%d].Pickup.Location: %w", i, err)
+		if err := validateStepLocation(s.Pickup.Location, s.Pickup.LocationIndex); err != nil {
+			return fmt.Errorf("Shipments[%d].Pickup: %w", i, err)
 		}
-		if err := s.Delivery.Location.Validate(); err != nil {
-			return fmt.Errorf("Shipments[%d].Delivery.Location: %w", i, err)
+		if err := validateStepLocation(s.Delivery.Location, s.Delivery.LocationIndex); err != nil {
+			return fmt.Errorf("Shipments[%d].Delivery: %w", i, err)
 		}
 	}
 
+	return nil
+}
+
+// validateStepLocation checks that a shipment step has a location or, with
+// custom matrices, a location index.
+func validateStepLocation(location Point, locationIndex *int) error {
+	if len(location) > 0 {
+		return location.Validate()
+	}
+	if locationIndex == nil {
+		return fmt.Errorf("%w: needs a Location or a LocationIndex", ErrInvalidRequest)
+	}
 	return nil
 }

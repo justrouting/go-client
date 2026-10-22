@@ -32,21 +32,21 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	depot := justrouting.Point{103.8198, 1.3521}
-
 	// Two vans, each able to carry three parcels, working a morning shift.
 	shift := justrouting.TimeWindow{8 * 3600, 12 * 3600}
 	vehicles := []justrouting.Vehicle{
-		{ID: 1, Start: depot, End: depot, Capacity: []int{3}, TimeWindow: &shift},
-		{ID: 2, Start: depot, End: depot, Capacity: []int{3}, TimeWindow: &shift},
+		{ID: 1, Profile: "car", Start: justrouting.Point{103.79234106, 1.32463108}, End: justrouting.Point{103.79234106, 1.32463108}, Capacity: []int{500}, TimeWindow: &shift},
+		{ID: 2, Profile: "car", Start: justrouting.Point{103.82324228, 1.32408622}, End: justrouting.Point{103.82324228, 1.32408622}, Capacity: []int{1000}, TimeWindow: &shift},
 	}
 
 	// Four deliveries, each taking five minutes on site.
 	jobs := []justrouting.Job{
-		{ID: 1, Location: justrouting.Point{103.8514, 1.2897}, Delivery: []int{1}, Service: 300},
-		{ID: 2, Location: justrouting.Point{103.9915, 1.3644}, Delivery: []int{1}, Service: 300},
-		{ID: 3, Location: justrouting.Point{103.7649, 1.3329}, Delivery: []int{2}, Service: 300},
-		{ID: 4, Location: justrouting.Point{103.8198, 1.4382}, Delivery: []int{1}, Service: 300},
+		{ID: 1, Location: justrouting.Point{103.79751693, 1.31035001}, Pickup: []int{20}, Service: 300},
+		{ID: 2, Location: justrouting.Point{103.78432387, 1.31490148}, Pickup: []int{15}, Service: 300},
+		{ID: 3, Location: justrouting.Point{103.79763397, 1.31980519}, Pickup: []int{95}, Service: 300},
+		{ID: 4, Location: justrouting.Point{103.81234512, 1.31824846}, Pickup: []int{60}, Service: 300},
+		{ID: 5, Location: justrouting.Point{103.82152987, 1.30984208}, Pickup: []int{35}, Service: 300},
+		{ID: 6, Location: justrouting.Point{103.83701939, 1.32143977}, Delivery: []int{75}, Service: 300},
 	}
 
 	solution, err := client.Optimization.Solve(ctx, &justrouting.OptimizationRequest{

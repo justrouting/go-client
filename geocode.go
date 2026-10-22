@@ -83,6 +83,7 @@ type GeocodeResult struct {
 	Housenumber  string     `json:"housenumber,omitempty"`
 	Street       string     `json:"street,omitempty"`
 	Suburb       string     `json:"suburb,omitempty"`
+	District     string     `json:"district,omitempty"`
 	City         string     `json:"city,omitempty"`
 	County       string     `json:"county,omitempty"`
 	State        string     `json:"state,omitempty"`

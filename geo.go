@@ -162,4 +162,10 @@ type Waypoint struct {
 	// Nodes are the OSM node IDs of the snapped segment, when the engine
 	// returns them.
 	Nodes []int64 `json:"nodes,omitempty"`
+	// TripsIndex identifies which entry of a trip response this waypoint
+	// belongs to, when the engine returns it.
+	TripsIndex int `json:"trips_index,omitempty"`
+	// WaypointIndex is the position of this waypoint within its trip,
+	// when the engine returns it.
+	WaypointIndex int `json:"waypoint_index,omitempty"`
 }

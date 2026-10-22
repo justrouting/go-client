@@ -40,6 +40,59 @@ type MatrixRequest struct {
 	// "distance", or both. Defaults to both.
 	Annotations []string
 
+	// FallbackSpeed estimates the duration of unreachable pairs from their
+	// as-the-crow-flies distance at this speed, in km/h. The response
+	// reports which cells were estimated in [MatrixResponse.FallbackSpeedCells].
+	FallbackSpeed *float64
+
+	// FallbackCoordinate selects which coordinates fallback estimates are
+	// measured from: "input" (the engine default) or "snapped".
+	FallbackCoordinate string
+
+	// ScaleFactor scales every duration by this factor, for example 1.2
+	// for +20%.
+	ScaleFactor *float64
+
+	// Bearings restricts the direction of travel at each coordinate, one
+	// entry per coordinate in visiting order: "{bearing}" or
+	// "{bearing},{range}" in degrees, for example "0,20" for north within
+	// ±20°. Coordinates without a restriction use the default when their
+	// entry is missing at the end of the list.
+	Bearings []string
+
+	// Radiuses sets the snapping radius in meters per coordinate, one
+	// entry per coordinate in visiting order; "unlimited" disables
+	// snapping for that coordinate.
+	Radiuses []string
+
+	// Hints are opaque tokens from a previous response's waypoints that
+	// speed up snapping, one entry per coordinate in visiting order.
+	Hints []string
+
+	// Approaches restricts the road direction at each waypoint, one entry
+	// per waypoint in visiting order: "curb", "opposite", or
+	// "unrestricted" (the engine default). An empty entry also selects
+	// the default.
+	Approaches []string
+
+	// Exclude lists road classes to avoid, such as "motorway" or "ferry".
+	// Supported values depend on the profile.
+	Exclude []string
+
+	// Snapping selects how coordinates snap onto the road network:
+	// "default" (the engine default) avoids edges that cannot be used as
+	// start or end points; "any" snaps to any edge.
+	Snapping string
+
+	// GenerateHints requests a "hint" on every response waypoint for
+	// reuse in later requests. The engine does this by default; set to
+	// false to omit hints.
+	GenerateHints *bool
+
+	// SkipWaypoints omits the response sources and destinations. They
+	// still take part in the matrix calculation.
+	SkipWaypoints bool
+
 	// Profile selects the routing profile. Defaults to [DefaultProfile].
 	Profile string
 }
@@ -64,6 +117,10 @@ type MatrixResponse struct {
 	Sources []*Waypoint `json:"sources"`
 	// Destinations are the destination coordinates snapped to the road network.
 	Destinations []*Waypoint `json:"destinations"`
+
+	// FallbackSpeedCells lists the [source, destination] pairs whose
+	// duration was estimated via the fallback_speed option.
+	FallbackSpeedCells [][]int `json:"fallback_speed_cells,omitempty"`
 }
 
 func (r *MatrixResponse) status() *Error { return osrmStatus(r.Code, r.Message) }
@@ -154,6 +211,40 @@ func (r *MatrixRequest) query() (url.Values, error) {
 	}
 	if destinations != "" {
 		q.Set("destinations", destinations)
+	}
+
+	if r.FallbackSpeed != nil {
+		q.Set("fallback_speed", strconv.FormatFloat(*r.FallbackSpeed, 'f', -1, 64))
+	}
+	if r.FallbackCoordinate != "" {
+		q.Set("fallback_coordinate", r.FallbackCoordinate)
+	}
+	if r.ScaleFactor != nil {
+		q.Set("scale_factor", strconv.FormatFloat(*r.ScaleFactor, 'f', -1, 64))
+	}
+	if len(r.Bearings) > 0 {
+		q.Set("bearings", strings.Join(r.Bearings, ";"))
+	}
+	if len(r.Radiuses) > 0 {
+		q.Set("radiuses", strings.Join(r.Radiuses, ";"))
+	}
+	if len(r.Hints) > 0 {
+		q.Set("hints", strings.Join(r.Hints, ";"))
+	}
+	if len(r.Approaches) > 0 {
+		q.Set("approaches", strings.Join(r.Approaches, ";"))
+	}
+	if len(r.Exclude) > 0 {
+		q.Set("exclude", strings.Join(r.Exclude, ","))
+	}
+	if r.Snapping != "" {
+		q.Set("snapping", r.Snapping)
+	}
+	if r.GenerateHints != nil {
+		q.Set("generate_hints", strconv.FormatBool(*r.GenerateHints))
+	}
+	if r.SkipWaypoints {
+		q.Set("skip_waypoints", "true")
 	}
 
 	return q, nil

@@ -99,6 +99,7 @@ func ExampleMapMatchingService_Get() {
 
 	match, err := client.MapMatching.Get(context.Background(), &justrouting.MapMatchingRequest{
 		Coordinates: trace,
+		Timestamps:  []int64{1720000000, 1720000300, 1720000600},
 	})
 	if err != nil {
 		log.Fatal(err)

@@ -11,6 +11,7 @@ import (
 // waypoints and a polyline geometry.
 const routeFixture = `{
   "code": "Ok",
+  "data_version": "2026-10-10T00:00:00Z",
   "waypoints": [
     {"hint":"aaa","distance":4.216,"name":"Marina Boulevard","location":[103.81982,1.35211]},
     {"hint":"bbb","distance":8.104,"name":"Changi Coast Road","location":[103.99151,1.36442]}
@@ -40,11 +41,15 @@ const routeFixture = `{
 func TestRoutesGetDecodesResponse(t *testing.T) {
 	c := newTestClient(t, jsonHandler(http.StatusOK, routeFixture))
 
-	route, err := c.Routes.Get(context.Background(), simpleRoute())
+	resp, err := c.Routes.GetAll(context.Background(), simpleRoute())
 	if err != nil {
-		t.Fatalf("Get: %v", err)
+		t.Fatalf("GetAll: %v", err)
+	}
+	if resp.DataVersion != "2026-10-10T00:00:00Z" {
+		t.Errorf("DataVersion = %q, want \"2026-10-10T00:00:00Z\"", resp.DataVersion)
 	}
 
+	route := resp.Routes[0]
 	if route.Distance != 24512.7 {
 		t.Errorf("Distance = %v, want 24512.7", route.Distance)
 	}
@@ -66,6 +71,9 @@ func TestRoutesGetDecodesResponse(t *testing.T) {
 		t.Errorf("Distance/1000 = %v km, want ~24.5", km)
 	}
 }
+
+// boolPtr returns a pointer to v, for optional bool request fields.
+func boolPtr(v bool) *bool { return &v }
 
 // Intersection classes carry the toll/ferry signals that callers surface.
 func TestRoutesGetDecodesIntersectionClasses(t *testing.T) {
@@ -222,9 +230,13 @@ func TestRoutesQueryEncoding(t *testing.T) {
 		empty []string
 	}{
 		{
-			name:  "defaults send no options",
-			req:   simpleRoute(),
-			empty: []string{"alternatives", "steps", "geometries", "overview", "annotations"},
+			name: "defaults send no options",
+			req:  simpleRoute(),
+			empty: []string{
+				"alternatives", "steps", "geometries", "overview", "annotations",
+				"bearings", "radiuses", "hints", "approaches", "snapping",
+				"generate_hints", "skip_waypoints", "waypoints",
+			},
 		},
 		{
 			name: "all options",
@@ -238,6 +250,13 @@ func TestRoutesQueryEncoding(t *testing.T) {
 				Overview:         "full",
 				ContinueStraight: &yes,
 				Exclude:          []string{"motorway", "ferry"},
+				Bearings:         []string{"0,20", "90"},
+				Radiuses:         []string{"unlimited", "500"},
+				Hints:            []string{"abcDEF==", "ghiJKL=="},
+				Approaches:       []string{"curb", "opposite"},
+				Snapping:         "any",
+				GenerateHints:    &yes,
+				WaypointIndices:  []int{0, 3},
 			},
 			want: map[string]string{
 				"alternatives":      "3",
@@ -247,6 +266,13 @@ func TestRoutesQueryEncoding(t *testing.T) {
 				"overview":          "full",
 				"continue_straight": "true",
 				"exclude":           "motorway,ferry",
+				"bearings":          "0,20;90",
+				"radiuses":          "unlimited;500",
+				"hints":             "abcDEF==;ghiJKL==",
+				"approaches":        "curb;opposite",
+				"snapping":          "any",
+				"generate_hints":    "true",
+				"waypoints":         "0;3",
 			},
 		},
 		{
@@ -257,6 +283,19 @@ func TestRoutesQueryEncoding(t *testing.T) {
 				Overview:    "false",
 			},
 			want: map[string]string{"overview": "false"},
+		},
+		{
+			name: "hints and response waypoints can be turned off",
+			req: &RouteRequest{
+				Origin:        Point{103.8198, 1.3521},
+				Destination:   Point{103.9915, 1.3644},
+				GenerateHints: boolPtr(false),
+				SkipWaypoints: true,
+			},
+			want: map[string]string{
+				"generate_hints": "false",
+				"skip_waypoints": "true",
+			},
 		},
 	}
 

@@ -115,20 +115,37 @@ func TestNearestQueryEncoding(t *testing.T) {
 		empty []string
 	}{
 		{
-			name:  "defaults send no options",
-			req:   simpleNearest(),
-			empty: []string{"number", "exclude"},
+			name: "defaults send no options",
+			req:  simpleNearest(),
+			empty: []string{
+				"number", "exclude", "bearings", "radiuses", "hints",
+				"approaches", "snapping", "generate_hints", "skip_waypoints",
+			},
 		},
 		{
 			name: "all options",
 			req: &NearestRequest{
-				Coordinate: Point{103.8198, 1.3521},
-				Number:     3,
-				Exclude:    []string{"motorway", "ferry"},
+				Coordinate:    Point{103.8198, 1.3521},
+				Number:        3,
+				Exclude:       []string{"motorway", "ferry"},
+				Bearings:      []string{"0,20"},
+				Radiuses:      []string{"500"},
+				Hints:         []string{"abcDEF=="},
+				Approaches:    []string{"curb"},
+				Snapping:      "any",
+				GenerateHints: boolPtr(true),
+				SkipWaypoints: true,
 			},
 			want: map[string]string{
-				"number":  "3",
-				"exclude": "motorway,ferry",
+				"number":         "3",
+				"exclude":        "motorway,ferry",
+				"bearings":       "0,20",
+				"radiuses":       "500",
+				"hints":          "abcDEF==",
+				"approaches":     "curb",
+				"snapping":       "any",
+				"generate_hints": "true",
+				"skip_waypoints": "true",
 			},
 		},
 	}

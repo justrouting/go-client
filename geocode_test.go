@@ -20,6 +20,7 @@ const geocodeFixture = `{
     "name": "Marina Bay Sands",
     "housenumber": "10",
     "street": "Bayfront Avenue",
+    "district": "Central Region",
     "city": "Singapore",
     "county": "Singapore",
     "state": "Singapore",
@@ -78,6 +79,9 @@ func TestGeocodeSearchDecodesResponse(t *testing.T) {
 	}
 	if r.Street != "Bayfront Avenue" {
 		t.Errorf("Street = %q", r.Street)
+	}
+	if r.District != "Central Region" {
+		t.Errorf("District = %q, want \"Central Region\"", r.District)
 	}
 	if r.CountryCode != "sg" {
 		t.Errorf("CountryCode = %q, want sg", r.CountryCode)

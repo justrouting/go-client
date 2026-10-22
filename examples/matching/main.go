@@ -36,20 +36,25 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	// A GPS trace along the East Coast Parkway, from Marina Bay towards
-	// Changi — points a few kilometres apart, with a little GPS noise.
+	// A short GPS trace of closely-spaced points (about 50m apart) along a
+	// road in Singapore. Timestamps are required: without them the match
+	// has no time dimension and its confidence collapses.
 	match, err := client.MapMatching.Get(ctx, &justrouting.MapMatchingRequest{
 		Coordinates: []justrouting.Point{
-			{103.823679, 1.355111},
-			{103.831810, 1.355074},
-			{103.839222, 1.346059},
-			{103.856595, 1.343471},
-			{103.864702, 1.329605},
-			{103.887874, 1.322419},
-			{103.928786, 1.335564},
-			{103.962769, 1.350345},
-			{103.983033, 1.344782},
-			{103.990312, 1.361474},
+			{103.836014, 1.367717},
+			{103.836231, 1.368218},
+			{103.836358, 1.368674},
+			{103.836844, 1.369040},
+			{103.837076, 1.369354},
+			{103.837525, 1.369661},
+			{103.838175, 1.369788},
+			{103.838594, 1.369975},
+		},
+		// Real applications should use device-reported UNIX timestamps.
+		// The 6-second spacing here approximates driving 50m at 30km/h.
+		Timestamps: []int64{
+			1694500000, 1694500006, 1694500012, 1694500018,
+			1694500024, 1694500030, 1694500036, 1694500042,
 		},
 	})
 	if err != nil {

@@ -22,7 +22,8 @@ const matrixFixture = `{
     {"hint":"a","distance":4.2,"name":"Marina Boulevard","location":[103.81982,1.35211]},
     {"hint":"b","distance":2.1,"name":"Orchard Road","location":[103.83,1.3048]},
     {"hint":"c","distance":8.1,"name":"Changi Coast Road","location":[103.99151,1.36442]}
-  ]
+  ],
+  "fallback_speed_cells": [[1, 2], [2, 1]]
 }`
 
 func threePoints() []Point {
@@ -32,6 +33,9 @@ func threePoints() []Point {
 		{103.9915, 1.3644},
 	}
 }
+
+// floatPtr returns a pointer to v, for optional float request fields.
+func floatPtr(v float64) *float64 { return &v }
 
 func TestMatrixGetDecodesResponse(t *testing.T) {
 	c := newTestClient(t, jsonHandler(http.StatusOK, matrixFixture))
@@ -53,6 +57,9 @@ func TestMatrixGetDecodesResponse(t *testing.T) {
 	}
 	if got, ok := m.Distance(0, 2); !ok || got != 24512.7 {
 		t.Errorf("Distance(0,2) = %v, %v; want 24512.7, true", got, ok)
+	}
+	if len(m.FallbackSpeedCells) != 2 || m.FallbackSpeedCells[0][0] != 1 || m.FallbackSpeedCells[0][1] != 2 {
+		t.Errorf("FallbackSpeedCells = %v, want [[1 2] [2 1]]", m.FallbackSpeedCells)
 	}
 }
 
@@ -106,7 +113,11 @@ func TestMatrixRequestEncoding(t *testing.T) {
 			req:       &MatrixRequest{Coordinates: threePoints()},
 			wantPath:  "/table/v1/driving/103.8198,1.3521;103.83,1.3048;103.9915,1.3644",
 			wantQuery: map[string]string{"annotations": "duration,distance"},
-			omitted:   []string{"sources", "destinations"},
+			omitted: []string{
+				"sources", "destinations", "fallback_speed", "fallback_coordinate",
+				"scale_factor", "bearings", "radiuses", "hints", "approaches",
+				"exclude", "snapping", "generate_hints", "skip_waypoints",
+			},
 		},
 		{
 			name: "sources and destinations subsets",
@@ -135,6 +146,44 @@ func TestMatrixRequestEncoding(t *testing.T) {
 				Profile:     "walking",
 			},
 			wantPath: "/table/v1/walking/103.8198,1.3521;103.83,1.3048;103.9915,1.3644",
+		},
+		{
+			name: "all general options",
+			req: &MatrixRequest{
+				Coordinates:   threePoints(),
+				Bearings:      []string{"0,20", "90", ""},
+				Radiuses:      []string{"unlimited", "500", "250"},
+				Hints:         []string{"abcDEF==", "ghiJKL==", "mnoPQR=="},
+				Approaches:    []string{"curb", "opposite", ""},
+				Exclude:       []string{"motorway", "ferry"},
+				Snapping:      "any",
+				GenerateHints: boolPtr(false),
+				SkipWaypoints: true,
+			},
+			wantQuery: map[string]string{
+				"bearings":       "0,20;90;",
+				"radiuses":       "unlimited;500;250",
+				"hints":          "abcDEF==;ghiJKL==;mnoPQR==",
+				"approaches":     "curb;opposite;",
+				"exclude":        "motorway,ferry",
+				"snapping":       "any",
+				"generate_hints": "false",
+				"skip_waypoints": "true",
+			},
+		},
+		{
+			name: "fallback and scaling options",
+			req: &MatrixRequest{
+				Coordinates:        threePoints(),
+				FallbackSpeed:      floatPtr(30),
+				FallbackCoordinate: "snapped",
+				ScaleFactor:        floatPtr(1.2),
+			},
+			wantQuery: map[string]string{
+				"fallback_speed":      "30",
+				"fallback_coordinate": "snapped",
+				"scale_factor":        "1.2",
+			},
 		},
 	}
 

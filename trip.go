@@ -57,6 +57,42 @@ type TripRequest struct {
 	// Exclude lists road classes to avoid, such as "motorway" or "ferry".
 	// Supported values depend on the profile.
 	Exclude []string
+
+	// Bearings restricts the direction of travel at each coordinate, one
+	// entry per coordinate in visiting order: "{bearing}" or
+	// "{bearing},{range}" in degrees, for example "0,20" for north within
+	// ±20°. Coordinates without a restriction use the default when their
+	// entry is missing at the end of the list.
+	Bearings []string
+
+	// Radiuses sets the snapping radius in meters per coordinate, one
+	// entry per coordinate in visiting order; "unlimited" disables
+	// snapping for that coordinate.
+	Radiuses []string
+
+	// Hints are opaque tokens from a previous response's waypoints that
+	// speed up snapping, one entry per coordinate in visiting order.
+	Hints []string
+
+	// Approaches restricts the road direction at each waypoint, one entry
+	// per waypoint in visiting order: "curb", "opposite", or
+	// "unrestricted" (the engine default). An empty entry also selects
+	// the default.
+	Approaches []string
+
+	// Snapping selects how coordinates snap onto the road network:
+	// "default" (the engine default) avoids edges that cannot be used as
+	// start or end points; "any" snaps to any edge.
+	Snapping string
+
+	// GenerateHints requests a "hint" on every response waypoint for
+	// reuse in later requests. The engine does this by default; set to
+	// false to omit hints.
+	GenerateHints *bool
+
+	// SkipWaypoints omits the response waypoints. They still take part in
+	// the trip calculation.
+	SkipWaypoints bool
 }
 
 // TripResponse is the full result of a trip query.
@@ -157,6 +193,27 @@ func (r *TripRequest) query() url.Values {
 	}
 	if len(r.Exclude) > 0 {
 		q.Set("exclude", strings.Join(r.Exclude, ","))
+	}
+	if len(r.Bearings) > 0 {
+		q.Set("bearings", strings.Join(r.Bearings, ";"))
+	}
+	if len(r.Radiuses) > 0 {
+		q.Set("radiuses", strings.Join(r.Radiuses, ";"))
+	}
+	if len(r.Hints) > 0 {
+		q.Set("hints", strings.Join(r.Hints, ";"))
+	}
+	if len(r.Approaches) > 0 {
+		q.Set("approaches", strings.Join(r.Approaches, ";"))
+	}
+	if r.Snapping != "" {
+		q.Set("snapping", r.Snapping)
+	}
+	if r.GenerateHints != nil {
+		q.Set("generate_hints", strconv.FormatBool(*r.GenerateHints))
+	}
+	if r.SkipWaypoints {
+		q.Set("skip_waypoints", "true")
 	}
 	return q
 }

@@ -12,9 +12,9 @@ import (
 const tripFixture = `{
   "code": "Ok",
   "waypoints": [
-    {"hint":"aaa","distance":4.216,"name":"Marina Boulevard","location":[103.81982,1.35211]},
-    {"hint":"ccc","distance":2.3,"name":"Sentosa Gateway","location":[103.8514,1.2897]},
-    {"hint":"bbb","distance":8.104,"name":"Changi Coast Road","location":[103.99151,1.36442]}
+    {"hint":"aaa","distance":4.216,"name":"Marina Boulevard","location":[103.81982,1.35211],"trips_index":0,"waypoint_index":0},
+    {"hint":"ccc","distance":2.3,"name":"Sentosa Gateway","location":[103.8514,1.2897],"trips_index":0,"waypoint_index":1},
+    {"hint":"bbb","distance":8.104,"name":"Changi Coast Road","location":[103.99151,1.36442],"trips_index":0,"waypoint_index":2}
   ],
   "trips": [
     {
@@ -69,6 +69,9 @@ func TestTripGetAllReturnsVisitingOrder(t *testing.T) {
 	// Sentosa second.
 	if resp.Waypoints[1].Name != "Sentosa Gateway" {
 		t.Errorf("Waypoints[1].Name = %q, want %q", resp.Waypoints[1].Name, "Sentosa Gateway")
+	}
+	if wp := resp.Waypoints[1]; wp.TripsIndex != 0 || wp.WaypointIndex != 1 {
+		t.Errorf("Waypoints[1] = {TripsIndex:%d WaypointIndex:%d}, want {0 1}", wp.TripsIndex, wp.WaypointIndex)
 	}
 }
 
@@ -131,32 +134,50 @@ func TestTripQueryEncoding(t *testing.T) {
 		empty []string
 	}{
 		{
-			name:  "defaults send no options",
-			req:   simpleTrip(),
-			empty: []string{"roundtrip", "source", "destination", "steps", "geometries", "overview", "annotations"},
+			name: "defaults send no options",
+			req:  simpleTrip(),
+			empty: []string{
+				"roundtrip", "source", "destination", "steps", "geometries",
+				"overview", "annotations", "bearings", "radiuses", "hints",
+				"approaches", "snapping", "generate_hints", "skip_waypoints",
+			},
 		},
 		{
 			name: "all options",
 			req: &TripRequest{
-				Coordinates: []Point{{103.8198, 1.3521}, {103.8514, 1.2897}},
-				Roundtrip:   &no,
-				Source:      "first",
-				Destination: "last",
-				Steps:       true,
-				Annotations: []string{"duration", "distance"},
-				Geometries:  "geojson",
-				Overview:    "full",
-				Exclude:     []string{"motorway", "ferry"},
+				Coordinates:   []Point{{103.8198, 1.3521}, {103.8514, 1.2897}},
+				Roundtrip:     &no,
+				Source:        "first",
+				Destination:   "last",
+				Steps:         true,
+				Annotations:   []string{"duration", "distance"},
+				Geometries:    "geojson",
+				Overview:      "full",
+				Exclude:       []string{"motorway", "ferry"},
+				Bearings:      []string{"0,20", "90"},
+				Radiuses:      []string{"unlimited", "500"},
+				Hints:         []string{"abcDEF==", "ghiJKL=="},
+				Approaches:    []string{"curb", "opposite"},
+				Snapping:      "any",
+				GenerateHints: boolPtr(true),
+				SkipWaypoints: true,
 			},
 			want: map[string]string{
-				"roundtrip":   "false",
-				"source":      "first",
-				"destination": "last",
-				"steps":       "true",
-				"annotations": "duration,distance",
-				"geometries":  "geojson",
-				"overview":    "full",
-				"exclude":     "motorway,ferry",
+				"roundtrip":      "false",
+				"source":         "first",
+				"destination":    "last",
+				"steps":          "true",
+				"annotations":    "duration,distance",
+				"geometries":     "geojson",
+				"overview":       "full",
+				"exclude":        "motorway,ferry",
+				"bearings":       "0,20;90",
+				"radiuses":       "unlimited;500",
+				"hints":          "abcDEF==;ghiJKL==",
+				"approaches":     "curb;opposite",
+				"snapping":       "any",
+				"generate_hints": "true",
+				"skip_waypoints": "true",
 			},
 		},
 	}

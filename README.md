@@ -61,7 +61,7 @@ func main() {
 }
 ```
 
-> > The coordinates above are in Singapore. See [Coordinates must share a country](#coordinates-must-share-a-country).
+> The coordinates above are in Singapore. See [Coordinates must share a country](#coordinates-must-share-a-country).
 
 ## Services
 
@@ -116,12 +116,13 @@ Snap a noisy GPS trace onto the road network and get the route that was driven.
 ```go
 match, err := client.MapMatching.Get(ctx, &justrouting.MapMatchingRequest{
     Coordinates: trace, // GPS points in chronological order, at least 2
+    Timestamps:  ts,    // required: UNIX seconds per point, monotonically increasing
 })
 fmt.Printf("%.0f%% confidence\n", match.Confidence*100)
 fmt.Println(match.Distance) // metres, via the embedded Route
 ```
 
-`Match` embeds `Route`, so every route field (`Distance`, `Duration`, `Geometry`, `Legs`, …) is promoted, plus the engine's `Confidence` (0–1). `MapMatching.GetAll` additionally returns `Tracepoints` — the input coordinates snapped to the road network, aligned with your input; an entry is `nil` when the engine could not match that point. Useful options: `Timestamps` (UNIX seconds per point), `Radiuses` (max snap distance, one value per point — the default is only a few metres, so noisy GPS points usually need it), `Gaps` (`"split"`/`"ignore"`), `Tidy`, `Waypoints` (indices to use as waypoints), and `Snapping` (`"default"`/`"any"`).
+`Match` embeds `Route`, so every route field (`Distance`, `Duration`, `Geometry`, `Legs`, …) is promoted, plus the engine's `Confidence` (0–1). `MapMatching.GetAll` additionally returns `Tracepoints` — the input coordinates snapped to the road network, aligned with your input; an entry is `nil` when the engine could not match that point. Useful options: `Timestamps` (required — UNIX seconds per point, monotonically increasing), `Radiuses` (max snap distance, one value per point — the default is only a few metres, so noisy GPS points usually need it), `Gaps` (`"split"`/`"ignore"`), `Tidy`, `Waypoints` (indices to use as waypoints), `Snapping` (`"default"`/`"any"`), `Bearings`, `Hints`, `Approaches`, `Exclude`, `GenerateHints`, and `SkipWaypoints`.
 
 ### Trip
 
@@ -260,7 +261,7 @@ if errors.As(err, &apiErr) {
 
 ### Retries
 
-Rate limits (429), server errors (5xx), and transport failures are retried with exponential backoff and jitter; a `Retry-After` header takes precedence when present. Other 4xx responses are returned immediately — they would fail identically on a retry and would still consume quota.
+Rate limits (429), server errors (500, 502, 503, 504), and transport failures are retried with exponential backoff and jitter; a `Retry-After` header takes precedence when present. Other 4xx responses are returned immediately — they would fail identically on a retry and would still consume quota.
 
 Retries are bounded by the context, not the HTTP client's timeout. A timeout on your `http.Client` applies to each individual attempt; use a context deadline to bound the whole call:
 

@@ -29,6 +29,37 @@ type NearestRequest struct {
 	// Exclude lists road classes to avoid, such as "motorway" or "ferry".
 	// Supported values depend on the profile.
 	Exclude []string
+
+	// Bearings restricts the direction of travel at the coordinate:
+	// "{bearing}" or "{bearing},{range}" in degrees, for example "0,20"
+	// for north within ±20°.
+	Bearings []string
+
+	// Radiuses sets the snapping radius in meters for the coordinate;
+	// "unlimited" disables snapping.
+	Radiuses []string
+
+	// Hints are opaque tokens from a previous response's waypoints that
+	// speed up snapping.
+	Hints []string
+
+	// Approaches restricts the road direction at the waypoint: "curb",
+	// "opposite", or "unrestricted" (the engine default).
+	Approaches []string
+
+	// Snapping selects how the coordinate snaps onto the road network:
+	// "default" (the engine default) avoids edges that cannot be used as
+	// start or end points; "any" snaps to any edge.
+	Snapping string
+
+	// GenerateHints requests a "hint" on every response waypoint for
+	// reuse in later requests. The engine does this by default; set to
+	// false to omit hints.
+	GenerateHints *bool
+
+	// SkipWaypoints omits the response waypoints. They still take part in
+	// the nearest-segment calculation.
+	SkipWaypoints bool
 }
 
 // NearestResponse is the result of a nearest-segment query.
@@ -110,6 +141,27 @@ func (r *NearestRequest) query() url.Values {
 	}
 	if len(r.Exclude) > 0 {
 		q.Set("exclude", strings.Join(r.Exclude, ","))
+	}
+	if len(r.Bearings) > 0 {
+		q.Set("bearings", strings.Join(r.Bearings, ";"))
+	}
+	if len(r.Radiuses) > 0 {
+		q.Set("radiuses", strings.Join(r.Radiuses, ";"))
+	}
+	if len(r.Hints) > 0 {
+		q.Set("hints", strings.Join(r.Hints, ";"))
+	}
+	if len(r.Approaches) > 0 {
+		q.Set("approaches", strings.Join(r.Approaches, ";"))
+	}
+	if r.Snapping != "" {
+		q.Set("snapping", r.Snapping)
+	}
+	if r.GenerateHints != nil {
+		q.Set("generate_hints", strconv.FormatBool(*r.GenerateHints))
+	}
+	if r.SkipWaypoints {
+		q.Set("skip_waypoints", "true")
 	}
 	return q
 }

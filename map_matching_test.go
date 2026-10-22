@@ -107,6 +107,7 @@ func TestMapMatchingRequestPathEncoding(t *testing.T) {
 			name: "custom profile",
 			req: &MapMatchingRequest{
 				Coordinates: []Point{{103.8198, 1.3521}, {103.9915, 1.3644}},
+				Timestamps:  []int64{1720000000, 1720000060},
 				Profile:     "motorcycle",
 			},
 			wantPath: "/match/v1/motorcycle/103.8198,1.3521;103.9915,1.3644",
@@ -141,36 +142,47 @@ func TestMapMatchingQueryEncoding(t *testing.T) {
 		{
 			name:  "defaults send no options",
 			req:   simpleMatch(),
-			empty: []string{"timestamps", "radiuses", "gaps", "tidy", "waypoints", "snapping", "steps", "geometries", "overview", "annotations"},
+			want:  map[string]string{"timestamps": "1720000000;1720000060;1720000120"},
+			empty: []string{"radiuses", "gaps", "tidy", "waypoints", "snapping", "steps", "geometries", "overview", "annotations", "bearings", "hints", "approaches", "generate_hints", "skip_waypoints"},
 		},
 		{
 			name: "all options",
 			req: &MapMatchingRequest{
-				Coordinates: []Point{{103.8198, 1.3521}, {103.8514, 1.2897}, {103.9915, 1.3644}},
-				Timestamps:  []int64{1720000000, 1720000060, 1720000120},
-				Radiuses:    []float64{10, 15, 25},
-				Gaps:        "ignore",
-				Tidy:        true,
-				Waypoints:   []int{0, 2},
-				Snapping:    "any",
-				Steps:       true,
-				Annotations: []string{"duration", "distance"},
-				Geometries:  "geojson",
-				Overview:    "full",
-				Exclude:     []string{"motorway", "ferry"},
+				Coordinates:   []Point{{103.8198, 1.3521}, {103.8514, 1.2897}, {103.9915, 1.3644}},
+				Timestamps:    []int64{1720000000, 1720000060, 1720000120},
+				Radiuses:      []float64{10, 15, 25},
+				Gaps:          "ignore",
+				Tidy:          true,
+				Waypoints:     []int{0, 2},
+				Snapping:      "any",
+				Steps:         true,
+				Annotations:   []string{"duration", "distance"},
+				Geometries:    "geojson",
+				Overview:      "full",
+				Exclude:       []string{"motorway", "ferry"},
+				Bearings:      []string{"0,20", "90", ""},
+				Hints:         []string{"abcDEF==", "ghiJKL==", "mnoPQR=="},
+				Approaches:    []string{"curb", "opposite", ""},
+				GenerateHints: boolPtr(false),
+				SkipWaypoints: true,
 			},
 			want: map[string]string{
-				"timestamps":  "1720000000;1720000060;1720000120",
-				"radiuses":    "10;15;25",
-				"gaps":        "ignore",
-				"tidy":        "true",
-				"waypoints":   "0;2",
-				"snapping":    "any",
-				"steps":       "true",
-				"annotations": "duration,distance",
-				"geometries":  "geojson",
-				"overview":    "full",
-				"exclude":     "motorway,ferry",
+				"timestamps":     "1720000000;1720000060;1720000120",
+				"radiuses":       "10;15;25",
+				"gaps":           "ignore",
+				"tidy":           "true",
+				"waypoints":      "0;2",
+				"snapping":       "any",
+				"steps":          "true",
+				"annotations":    "duration,distance",
+				"geometries":     "geojson",
+				"overview":       "full",
+				"exclude":        "motorway,ferry",
+				"bearings":       "0,20;90;",
+				"hints":          "abcDEF==;ghiJKL==;mnoPQR==",
+				"approaches":     "curb;opposite;",
+				"generate_hints": "false",
+				"skip_waypoints": "true",
 			},
 		},
 	}
@@ -207,6 +219,12 @@ func TestMapMatchingValidation(t *testing.T) {
 	}{
 		{name: "nil request", req: nil},
 		{name: "one coordinate", req: &MapMatchingRequest{Coordinates: []Point{{103.8, 1.3}}}},
+		{
+			name: "missing timestamps",
+			req: &MapMatchingRequest{
+				Coordinates: []Point{{103.8, 1.3}, {103.9, 1.3}},
+			},
+		},
 		{
 			name: "timestamp count mismatch",
 			req: &MapMatchingRequest{
@@ -267,6 +285,7 @@ func TestMapMatchingRejectsBadCoordinatesLocally(t *testing.T) {
 	// The classic [lat, lon] mix-up: 103.8198 is not a latitude.
 	_, err := c.MapMatching.Get(context.Background(), &MapMatchingRequest{
 		Coordinates: []Point{{1.3521, 103.8198}, {103.9915, 1.3644}},
+		Timestamps:  []int64{1720000000, 1720000060},
 	})
 	if !errors.Is(err, ErrInvalidCoordinates) {
 		t.Errorf("err = %v, want ErrInvalidCoordinates", err)
@@ -280,5 +299,6 @@ func simpleMatch() *MapMatchingRequest {
 			{103.8514, 1.2897},
 			{103.9915, 1.3644},
 		},
+		Timestamps: []int64{1720000000, 1720000060, 1720000120},
 	}
 }
